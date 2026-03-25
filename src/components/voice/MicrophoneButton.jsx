@@ -2,9 +2,9 @@ import React from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export const MicrophoneButton = ({ isListening, onClick, confidence, error }) => {
+export const MicrophoneButton = ({ isListening, onClick, confidence, error, disabled }) => {
   return (
-    <div className="relative group">
+    <div className={`relative group ${disabled ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}>
       {/* Glow Effect */}
       {isListening && (
         <motion.div
@@ -16,6 +16,7 @@ export const MicrophoneButton = ({ isListening, onClick, confidence, error }) =>
       
       <motion.button
         onClick={onClick}
+        disabled={disabled}
         className={`relative w-24 h-24 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${
           error
             ? 'bg-gradient-to-br from-red-600 to-red-800'

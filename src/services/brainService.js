@@ -1,8 +1,12 @@
 import ollama from './ollamaService';
+import gemini from './geminiService';
+
+// Set this to true to use Gemini, false for local Ollama
+const USE_GEMINI = true; 
 
 export const brainService = {
   async processTurn(transcript, currentFormData, currentField) {
-    console.log('[Brain] Thinking about:', transcript);
+    console.log(`[Brain] Thinking about: "${transcript}" using ${USE_GEMINI ? 'Gemini' : 'Ollama'}`);
     
     const prompt = `
       You are the "VoiceRecruit AI Assistant", a friendly recruitment expert.
@@ -22,7 +26,8 @@ export const brainService = {
          - FIND the first field in the list above that is empty and ask for it specifically.
          - DO NOT give one-word answers like "And" or "Ok".
          - Be polite but very brief (max 15 words).
-      4. SUBMIT: Set "shouldSubmit" to true ONLY if they say "submit", "send", or "finished".
+      4. SUBMIT: Set "shouldSubmit" to true if the user explicitly wants to finish, e.g., "submit", "send it", "done", "finished", "completed".
+      5. COMPLETION: If all fields are filled, suggest they say "submit" to finish.
       
       STRICT JSON OUTPUT (No markdown, no preamble):
       {
@@ -33,7 +38,10 @@ export const brainService = {
     `;
 
     try {
-      const response = await ollama.generateResponse(prompt);
+      const response = USE_GEMINI 
+        ? await gemini.generateResponse(prompt)
+        : await ollama.generateResponse(prompt);
+      
       console.log('[Brain] AI Raw Response:', response);
       if (!response) return null;
 

@@ -12,6 +12,7 @@ function App() {
   const [formData, setFormData] = useState({});
   const formDataRef = useRef({});
   const [isInitialized, setIsInitialized] = useState(false);
+  const isSpeakingRef = useRef(false);
 
   // Sync ref with state
   useEffect(() => {
@@ -46,11 +47,15 @@ function App() {
   }, [addMessage, sendMessage]);
 
   const processTranscript = useCallback(async (text, confidence) => {
-    if (!text || text.trim().length < 2) return;
+    if (isSpeakingRef.current) {
+      console.log('[App] Ignoring transcript because assistant is speaking');
+      return;
+    }
 
     console.log(`[Transcript] Text: "${text}", Confidence: ${confidence.toFixed(2)}`);
     addMessage('user', text);
     setIsGenerating(true);
+    stopListening(); // Aggressively stop listening once we get a final transcript
     
     try {
       const result = await brainService.processTurn(text, formDataRef.current, currentField);
@@ -93,12 +98,21 @@ function App() {
       const cleanText = lastMessage.text.replace(/[\u2700-\u27bf]|[\u2190-\u21ff]|[\u2600-\u26ff]|[\u2b05-\u2b05]|[\u2b07-\u2b07]|[\u2b06-\u2b06]|[\u2b05-\u2b05]|[\u2b07-\u2b07]|[\u2b06-\u2b06]|[\u2190-\u21ff]/g, '');
       
       stopListening();
-      speak(cleanText, () => {
-        console.log('[Coordination] Assistant finished speaking, restarting listener...');
-        startListening();
-      });
+      isSpeakingRef.current = true;
+      
+      // Delay speech slightly to ensure mic is fully off
+      setTimeout(() => {
+        speak(cleanText, () => {
+          console.log('[Coordination] Assistant finished speaking, restarting listener...');
+          isSpeakingRef.current = false;
+          // Add 300ms buffer before restarting mic to avoid catching final echo
+          setTimeout(() => {
+            if (!isGenerating) startListening();
+          }, 400);
+        });
+      }, 100);
     }
-  }, [conversationHistory, speak, startListening, stopListening]); // Removed isGenerating from deps to avoid early triggers
+  }, [conversationHistory, speak, startListening, stopListening, isGenerating]);
 
   useEffect(() => {
     if (isGenerating) {
@@ -118,13 +132,14 @@ function App() {
     }
   }, [error, addMessage]);
 
-  // 5. App Startup
-  useEffect(() => {
+  // 5. App Startup (Requires User Gesture)
+  const handleStart = () => {
     if (!isInitialized) {
       setIsInitialized(true);
       addMessage('assistant', "Hi! I'm your recruitment assistant. Let's get started. What's your full name?");
+      // The button click provides the gesture to start synthesis and recognition
     }
-  }, [isInitialized, addMessage]);
+  };
 
   const handleReset = () => {
     setFormData({});
@@ -144,6 +159,8 @@ function App() {
           onToggleMic={isListening ? stopListening : startListening}
           onReset={handleReset}
           onStopSpeaking={stopSpeaking}
+          isInitialized={isInitialized}
+          onStart={handleStart}
         />
         
         <FormPanel 

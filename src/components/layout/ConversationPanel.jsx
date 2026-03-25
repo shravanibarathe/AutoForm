@@ -12,7 +12,9 @@ export const ConversationPanel = ({
   interimTranscript, 
   onToggleMic,
   onReset,
-  onStopSpeaking
+  onStopSpeaking,
+  isInitialized,
+  onStart
 }) => {
   const scrollRef = useRef(null);
 
@@ -46,33 +48,49 @@ export const ConversationPanel = ({
       {/* Scrollable History */}
       <div 
         ref={scrollRef}
-        className="flex-1 p-6 overflow-y-auto space-y-4 scroll-smooth"
+        className="flex-1 p-6 overflow-y-auto space-y-4 scroll-smooth relative"
       >
-        <AnimatePresence>
-          {conversationHistory.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
+        {!isInitialized ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10 p-6 text-center">
+            <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mb-4 text-white animate-bounce-slow">
+              <Bot size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Ready to Start?</h3>
+            <p className="text-sm text-gray-500 mb-6">Click below to begin your voice-powered job application. We'll guide you through the whole process!</p>
+            <button 
+              onClick={onStart}
+              className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 transition-all transform hover:scale-105 active:scale-95"
             >
-              <div className={`flex items-start gap-2 max-w-[85%] ${msg.role === 'assistant' ? 'flex-row' : 'flex-row-reverse'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  msg.role === 'assistant' ? 'bg-indigo-600' : 'bg-purple-600'
-                }`}>
-                  {msg.role === 'assistant' ? <Bot size={18} className="text-white" /> : <User size={18} className="text-white" />}
+              Start Onboarding Now
+            </button>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {conversationHistory.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${msg.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
+              >
+                <div className={`flex items-start gap-2 max-w-[85%] ${msg.role === 'assistant' ? 'flex-row' : 'flex-row-reverse'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    msg.role === 'assistant' ? 'bg-indigo-600' : 'bg-purple-600'
+                  }`}>
+                    {msg.role === 'assistant' ? <Bot size={18} className="text-white" /> : <User size={18} className="text-white" />}
+                  </div>
+                  <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'assistant' 
+                      ? 'bg-indigo-50 text-indigo-900 rounded-tl-none' 
+                      : 'bg-indigo-600 text-white rounded-tr-none shadow-md'
+                  }`}>
+                    {msg.text}
+                  </div>
                 </div>
-                <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'assistant' 
-                    ? 'bg-indigo-50 text-indigo-900 rounded-tl-none' 
-                    : 'bg-indigo-600 text-white rounded-tr-none shadow-md'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
         {isGenerating && (
           <motion.div
             initial={{ opacity: 0, y: 5 }}
@@ -106,14 +124,17 @@ export const ConversationPanel = ({
           isListening={isListening} 
           onClick={onToggleMic} 
           confidence={confidence}
+          disabled={!isInitialized}
         />
         <div className="text-xs font-medium">
           {error ? (
             <span className="text-red-500 animate-pulse">⚠️ {error}</span>
           ) : isListening ? (
             <span className="text-indigo-600 animate-pulse">Listening to your voice...</span>
+          ) : isInitialized ? (
+            <span className="text-gray-400">Click microphone or just speak</span>
           ) : (
-            <span className="text-gray-400">Click microphone to speak</span>
+            <span className="text-gray-400">Please start onboarding first</span>
           )}
         </div>
       </div>
